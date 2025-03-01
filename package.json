@@ -1,0 +1,19 @@
+{
+    "id": "xiaoniao-dj",
+    "name": "小鸟短剧系统",
+    "version": "1.0",
+    "description": "一款短剧影视APP,短剧小程序源码,仿抖音无限滑动切换视频",
+    "keywords": [
+        "短剧",
+        "影视",
+        "电视剧",
+        "短视频"
+    ],
+    "displayName": "小鸟短剧系统，短剧小程序源码,仿抖音无限滑动切换视频",
+    "dcloudext": {
+        "category": [
+            "uni-app前端模板",
+            "前端页面模板"
+        ]
+    }
+}

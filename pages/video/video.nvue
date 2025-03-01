@@ -1,0 +1,450 @@
+<template>
+  <view class="detail" :style="'height: '+ windowHeight +'px;'">
+   <swiper :style="'height: '+ videoHeight +'px;'" class="swipers" 
+    @change="swiperChange" :current="current" :vertical="true" :circular="circular" @touchstart="touchStart" @touchend="touchEnd">
+		<swiper-item class="swipers-item" v-for="(list, index) in displaySwiperList" :key="index">
+			<view class="swipers-items" v-if="Math.abs(displayIndex - index)==0 && list.src">
+				<video class="swipers-items-video" :style="'height: '+ videoHeight +'px;'"
+				:id="list._id"
+				:controls="controls"
+				:show-fullscreen-btn="false"
+				:show-center-play-btn="false"
+				:loop="!isplay"
+				:muted="muted"
+				:enable-progress-gesture="false"
+				@play="play"
+				@pause="pause"
+				@ended="ended"
+				@controlstoggle="controlstoggle"
+				@click="tapVides()"
+				:src="list.src"
+				:poster="list.img"
+				autoplay="false"
+				@loadedmetadata="onVideoLoaded"
+				:object-fit="vodfit"
+				></video>
+			</view>
+			<!-- 封面图 -->
+			<view v-else>
+				<image :src="list.img" mode="aspectFit" class="swipers-items-imgsbg" :style="'width: '+ windowWidth +'px; height: '+ videoHeight +'px;'" ></image>
+			</view>
+			<view v-if="ispause" class="playbtnbox" @click="tapVides()" :style="'height: '+ videoHeight +'px;'">
+				<image class="playState" src="@/static/play.png"></image>
+			</view>
+			<view class="swipers-items-right">
+				<view @click.stop="cLike(list.like,list.id,list.mid);" class="swipers-items-right-item">
+					<view>
+					<image v-if="list.like*1==1" src="@/static/aixin.png" class="swipers-items-right-item-img"></image>
+					<image v-if="list.like*1==2" src="@/static/aixinRed.png" class="swipers-items-right-item-img"></image>
+					</view>
+					<text :class="{'likeNumActive':list.like}" class="swipers-items-right-item-txt" style="font-weight: bold;" >{{list.like_n}}</text>
+				</view>
+				<!-- 3.分享 -->
+				<view class="swipers-items-right-item">
+					<view>
+						<image src="@/static/share-fill.png" class="swipers-items-right-item-img"></image>
+					</view>
+					<text class="swipers-items-right-item-txt" >{{$t('Share')}}</text>
+					<button open-type="share" plain="true" class="share-btn" @click.stop="share" style="border: 0;"></button>
+				</view>
+				
+				<!-- 4.追剧 -->
+				<view class="comment swipers-items-right-item" @click.stop="toComment(list.iszj,list.id,list.mid)" >
+					<view >
+					<image v-if="list.iszj*1==1" src="@/static/sc.png" class="swipers-items-right-item-img"></image>
+					<image v-if="list.iszj*1==2" src="@/static/scRed.png" class="swipers-items-right-item-img"></image>
+					</view>
+					<text class="swipers-items-right-item-txt" v-if="list.iszj*1==1">{{$t('Watch')}}</text>
+					<text class="swipers-items-right-item-txt" v-if="list.iszj*1==2">{{$t('Watched')}}</text>
+				</view>
+				
+			</view>
+			<!-- 最底下的文字部分 -->
+			<view class="swipers-items-info">
+				<view class="swipers-items-info-title">
+					<image :src="list.img" class="swipers-items-info-img"></image>
+					<text class="swipers-items-info-name">{{list.title}}</text>
+				</view>
+				<text class="swipers-items-info-content">{{list.msg}}</text>
+				<view class="selvideo" @click.stop="detail(list.id,0)">
+					<view class="swipers-items-info-num">
+						<text style="font-size: 26rpx;color:white;">{{list.namets}}</text>
+					</view>
+					<uni-icons type="right" size="18" class="selicon" color="white"></uni-icons>
+				</view>
+			</view>
+		</swiper-item>
+    </swiper>
+	<com-footer></com-footer>
+  </view>
+</template>
+
+<script>
+import request from "@/common/request.js"
+export default {
+  data() {
+    return {
+		pagehide:false,
+		title:'',
+		vodfit:'fill',
+		controls:false,
+		originList: [], // 源数据
+		displaySwiperList: [], // swiper需要的数据
+		displayIndex: 0, // 用于显示swiper的真正的下标数值只有：0，1，2。
+		originIndex: 0, // 记录源数据的下标
+		windowWidth:0,
+		windowHeight:0,
+		current:0,
+		circular:false,
+		oid:0,
+		isplay:true,//是否自动播放下一个视频
+		issp:'',
+		ispause:false,
+		lang:'en',
+		muted:true,//是否静音
+    }
+  },
+  onLoad(e) {
+	this.lang = uni.getStorageSync('locale');
+	this.$t=getApp().globalData.$t;
+	if(e.invitecode){
+		uni.setStorageSync('invitecode',e.invitecode)
+	}
+	
+	// 使用同步方法获取系统信息
+	const systemInfo = uni.getSystemInfoSync();
+	// 获取安全区域信息
+	const safeArea = systemInfo.safeArea;
+	// 底部安全高度（注意：这里假设safeArea.bottom是相对于屏幕底部的安全距离）
+	const safeHeight = safeArea.bottom ? safeArea.bottom : 0;
+  	this.windowWidth = systemInfo.windowWidth>750?750:systemInfo.windowWidth
+  	this.windowHeight = systemInfo.windowHeight
+	this.videoHeight = safeHeight-50
+  	this.Recommend();
+  },
+  onShow() {
+  	  if(this.ispause==true){
+  		  uni.createVideoContext(this.originList[this.originIndex]._id,this).play();
+  		  this.ispause=false
+  	  }
+	  this.pagehide = false
+  },
+  onHide() {
+  	  this.pagehide = true
+  	  if(this.ispause==false){
+  		  uni.createVideoContext(this.originList[this.originIndex]._id,this).pause();
+  		  this.ispause=true
+  	  }
+  },
+  methods: {
+	  onVideoLoaded(event){
+	  	//自适应横竖屏
+	  	if(event.detail.height < event.detail.width){
+	  		this.vodfit='contain';
+	  	}
+	  },
+	  share(){
+			var this_=this
+	  		var href= request.config.baseUrl+'/h5/#/pages/video/video'
+			//代理邀请码
+			if(this.inviteCode){
+				this.sharelink +='?invitecode='+this.inviteCode
+			}
+	  		uni.setClipboardData({
+	  			data: href,
+	  			complete() {
+	  				uni.showToast({
+	  					title: this_.$t('Sharing link copied')
+	  				})
+	  			}
+	  		})
+	  },
+	  tapVides(){
+	  		if(this.ispause){
+	  			uni.createVideoContext(this.originList[this.originIndex]._id,this).play();
+	  			this.ispause=false
+	  		}else{
+	  			uni.createVideoContext(this.originList[this.originIndex]._id,this).pause();
+	  			this.ispause=true
+	  		}
+	  },
+	  async Recommend(){
+			let data = {};
+			let [err,res] =await request.get('/api/video/videoRecommend',data,{token:true});
+			if(res.data.data){
+				var msg = res.data.data
+				for (let i = 0; i < msg.length; i++) {
+					this.originList.push(msg[i])
+				}
+				this.initSwiperData();
+			}
+	  },
+	  play(){
+	  	if(this.pagehide == true){//页面隐藏
+	  		uni.createVideoContext(this.originList[this.originIndex]._id,this).pause();
+	  		this.ispause=true
+	  		this.muted=true
+	  	}else{
+	  		this.muted=false
+	  		this.ispause=false
+	  	}
+	  },
+	  pause(){
+	   	this.ispause=true
+	  },
+	  ended(){
+		if(this.isplay){
+			if(this.displayIndex<2){
+				this.current=this.displayIndex+1
+			}else{
+				this.current=0	
+			}
+		}
+	  },
+    /**
+     * 初始一个显示的swiper数据
+     * originIndex  从源数据的哪个开始显示默认0，如从其他页面跳转进来，要显示第n个，这个参数就是他的下标
+     */
+    initSwiperData(originIndex = this.originIndex) {
+		this.ispause=true
+		this.muted=true
+		
+		const originListLength = this.originList.length; // 源数据长度
+		const displayList = [];
+		displayList[this.displayIndex] = this.originList[originIndex];
+      	displayList[this.displayIndex - 1 == -1 ? 2 : this.displayIndex - 1] = this.originList[originIndex - 1 == -1 ? originListLength - 1 : originIndex - 1];
+		displayList[this.displayIndex + 1 == 3 ? 0 : this.displayIndex + 1] =this.originList[originIndex + 1 == originListLength ? 0 : originIndex + 1];
+		this.displaySwiperList = displayList;
+
+	  if(this.oid>=this.originList.length){
+		this.oid=0
+	  }
+	  if(this.oid<0){
+	  	this.oid=this.originList.length-1
+	  }
+	  
+	  this.title=this.originList[originIndex].name
+	  uni.setNavigationBarTitle({
+	      title: this.title
+	  });
+
+	  if(this.oid || originIndex){
+		  uni.createVideoContext(this.originList[this.oid]._id,this).stop();
+	  }
+	  setTimeout(()=>{
+			this.muted=false
+			uni.createVideoContext(this.originList[originIndex]._id,this).play();
+	  },500)
+	  
+    },
+	//滑动兼容APP android
+	touchStart(res) {
+		// #ifdef APP-PLUS
+		this.pageStartY = res.changedTouches[0].pageY;
+		//console.log("touchStart：" + this.pageStartY);
+		// #endif
+	},
+	touchEnd(res) {
+		// #ifdef APP-PLUS
+		this.pageEndY = res.changedTouches[0].pageY;
+		var diff=this.pageStartY - this.pageEndY
+		//console.log("touchEnd：" + this.pageEndY,diff,this.current);
+		let platform = uni.getSystemInfoSync().osName;
+		if (platform == 'android') {
+			if (diff > 100) {
+				if(this.displayIndex<2){
+					this.current=this.displayIndex+1
+				}else{
+					this.current=0	
+				}
+			} else if (diff < -100) {
+				if (this.current >= 1) {
+					this.current = this.current - 1
+				}else{
+					this.current=2	
+				}
+			}
+		}
+		// #endif
+	},
+    /**
+     * swiper滑动时候
+     */
+    swiperChange(event) {
+		this.circular=true
+		const { current } = event.detail;
+		const originListLength = this.originList.length; // 源数据长度
+      // =============向后==========
+      if (this.displayIndex - current == 2 || this.displayIndex - current == -1) {
+        this.originIndex =
+          this.originIndex + 1 == originListLength ? 0 : this.originIndex + 1;
+        this.displayIndex = this.displayIndex + 1 == 3 ? 0 : this.displayIndex + 1;
+
+		this.oid=this.originIndex-1
+        this.initSwiperData(this.originIndex);
+      }
+      // ======如果两者的差为-2或者1则是向前滑动============
+      else if (this.displayIndex - current == -2 || this.displayIndex - current == 1) {
+        this.originIndex = this.originIndex - 1 == -1 ? originListLength - 1 : this.originIndex - 1;
+        this.displayIndex = this.displayIndex - 1 == -1 ? 2 : this.displayIndex - 1;
+		console.log('---',this.displayIndex)
+		this.oid=this.originIndex+1
+        this.initSwiperData(this.originIndex);
+      }
+
+    },
+	detail(vid,mid){
+		uni.navigateTo({
+			url:'/pages/video/detail?vid='+vid+'&mid='+mid
+		})
+	},
+	async toComment(sss,vid,mid){
+		if(!this.memberToken){
+			this.denglu()
+			return false
+		}
+		const video = this.displaySwiperList[this.displayIndex];
+		//console.log(sss)
+		if(sss==1){
+			this.displaySwiperList[this.displayIndex].iszj=2
+		}else{
+			this.displaySwiperList[this.displayIndex].iszj=1
+		}
+		
+		let this_=this
+		let data = {'vid':vid,'mid':mid};
+		let [err,res] =await request.get('/api/user/videorecord',data,{token:true});
+	},
+	controlstoggle(e){
+		this.issp=e.detail.show
+	},
+	async cLike(sss,vid,mid){
+		if(!this.memberToken){
+			this.denglu()
+			return false
+		}
+		const video = this.displaySwiperList[this.displayIndex];
+		if(sss==1){
+			this.displaySwiperList[this.displayIndex].like=2
+			video.like_n += 1;
+		}else{
+			this.displaySwiperList[this.displayIndex].like=1
+			video.like_n -= 1
+		}
+		
+		let this_=this
+		let data = {'vid':vid,'mid':mid};
+		let [err,res] =await request.get('/api/user/taplove',data,{token:true});
+	},
+	denglu(){
+		uni.showModal({
+			title: this.$t('Warning'),
+			content:  this.$t('Please login first'),
+			showCancel: true,
+			confirmText: this.$t('Sign in'),
+			success: function (res) {
+				if (res.confirm) {
+					uni.navigateTo({
+						url:"/pages/login/login"
+					})
+				}
+			}
+		});
+		
+	}
+  }
+}
+</script>
+
+<style>
+.detail {
+	background-color: #000;
+	flex:1;
+}
+.swipers {
+	width:750upx;
+}
+.swipers-item {
+	
+}
+.swipers-items {
+	position: relative;
+}
+.swipers-items-video {
+	width:750upx;
+}
+.swipers-items-imgsbg {
+	position: absolute;
+}
+.playbtnbox{
+	width:750upx;
+	position: absolute;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.playState{
+	width:  160rpx;
+	height: 160rpx;
+	opacity: 0.8;
+}
+
+.swipers-items-back {
+	position: absolute;
+	left: 20rpx;
+	z-index: 999;
+}
+.swipers-items-info {
+	width: 600rpx;
+	position: absolute;
+	bottom: 0rpx;
+	left: 20rpx;
+	color: #ffffff;
+	z-index: 999;	
+}
+.swipers-items-info-title{
+	display: flex;flex-direction: row;
+	align-items: center;
+}
+.swipers-items-info-img{width:60rpx;height:80rpx;border-radius: 10rpx;}
+.swipers-items-info-name{color: #ffffff;font-size: 32rpx;margin-left: 20rpx;}
+.swipers-items-info-content {
+	margin-top: 10rpx;
+	font-size: 26rpx;
+	color: #eeeeee;
+}
+.selvideo{width:600rpx; position: relative;margin-top: 30rpx;margin-bottom: 20rpx;}
+.selicon{width:60rpx;height:60rpx; position: absolute;top:20rpx;right: 40rpx;}
+.swipers-items-info-num {
+	color: #ffffff;
+	font-size: 28rpx;
+	background-color: rgba(255,255,255,0.2);
+	border-radius: 10rpx;
+	padding: 20rpx;
+}
+.swipers-items-right {
+	width: 80rpx;
+	position: absolute;
+	right: 10rpx;
+	bottom: 200rpx;
+	z-index: 999;	
+}
+.swipers-items-right-item {
+	margin-bottom: 40rpx;
+	align-items: center;
+}
+.swipers-items-right-item-img {
+	width: 60rpx;
+	height: 60rpx;
+}
+.swipers-items-right-item-txt {
+	text-align: center;
+	font-size: 24rpx;
+	color: #ffffff;
+	font-weight: bold;
+	margin-top: 10rpx;
+}
+.share-btn{
+	position: absolute; width: 60rpx; height: 60rpx;border: 0;
+}
+</style>

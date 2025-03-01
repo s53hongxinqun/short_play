@@ -1,0 +1,938 @@
+<template>
+   <view class="detail" :style="'height: '+ windowHeight +'px;'">
+    <swiper :style="'height: '+ windowHeight +'px;'" class="swipers" 
+     @change="swiperChange" :current="current" :vertical="true" :circular="circular" @touchstart="touchStart" @touchend="touchEnd">
+   		<swiper-item class="swipers-item" v-for="(list, index) in displaySwiperList" :key="index">
+   			<view class="swipers-items" v-if="displayIndex == index && list.pays==2">
+   				<video class="swipers-items-video" :style="'height: '+ videoHeight +'px;'"
+   				:id="list._id"
+   				:controls="controls"
+   				:show-fullscreen-btn="false"
+   				:show-center-play-btn="false"
+   				:loop="!isplay"
+   				:muted="muted"
+   				:enable-progress-gesture="false"
+   				@play="play"
+   				@pause="pause"
+   				@ended="ended"
+   				@controlstoggle="controlstoggle"
+   				@click="tapVides()"
+   				:src="list.src"
+   				:poster="list.img"
+   				autoplay="false"
+   				@loadedmetadata="onVideoLoaded"
+   				:object-fit="vodfit"
+   				></video>
+   			</view>
+			<!-- 封面图 -->
+			<view v-else :style="[{height:videoHeight + 'px'}]">
+				<image :src="list.img" mode="scaleToFill" class="swipers-items-imgsbg" ></image>
+			</view>
+			
+			<view class="topbar">
+				<uni-nav-bar dark background-color="transparent" status-bar left-icon="left" :left-text="list.fjname" :leftWidth="150"  @clickLeft="clickLeft" />
+			</view>
+			
+			<view v-if="list.pays==1" class="playbtnbox" :style="[{ height: videoHeight + 'px' }]">
+				<view class="unlockbtn" @click.stop="tapVides()">
+					<text class="unlockbtn-txt">{{$t('video.notplay')}}</text>
+				</view>
+			</view>
+			<view v-if="list.pays==2 && ispause" class="playbtnbox" :style="[{ height: videoHeight + 'px' }]" @click.stop="tapVides()">
+				<image  class="playState" src="@/static/play.png"></image>
+			</view>
+			
+			<view v-if="!isqp" class="swipers-items-right">
+				<view @click.stop="cLike(list.like,list.pid,list.mid);" class="swipers-items-right-item">
+					<image v-if="list.like*1==1" src="@/static/aixin.png" class="swipers-items-right-item-img"></image>
+					<image v-if="list.like*1==2" src="@/static/aixinRed.png" class="swipers-items-right-item-img"></image>
+					<text :class="{'likeNumActive':list.like}" class="swipers-items-right-item-txt" style="font-weight: bold;" >{{list.like_n}}</text>
+				</view>
+				<!-- 3.分享 -->
+				<view class="swipers-items-right-item" @click.stop="share">
+					<view>
+						<image src="@/static/share-fill.png" class="swipers-items-right-item-img"></image>
+					</view>
+					<text class="swipers-items-right-item-txt">{{$t('Share')}}</text>
+					<button open-type="share" plain="true" class="share-btn" style="border: 0;"></button>
+				</view>
+				<!-- 4.追剧 -->
+				<view class="comment swipers-items-right-item" @click.stop="toComment(list.iszj,list.pid,list.mid)" >
+					<image v-if="list.iszj*1==1" src="@/static/sc.png" class="swipers-items-right-item-img"></image>
+					<image v-if="list.iszj*1==2" src="@/static/scRed.png" class="swipers-items-right-item-img"></image>
+					<text class="swipers-items-right-item-txt">{{$t('Watch')}}</text>
+				</view>
+			</view>
+			<!-- 名称简介 -->
+			<view v-if="!isqp" class="swipers-items-info">
+				<view class="swipers-items-info-title">
+					<image :src="list.img" class="swipers-items-info-img"></image>
+					<text class="swipers-items-info-name">{{list.title}}</text>
+				</view>
+				<text class="swipers-items-info-content" :style="infostyle" @click.stop="infodetail()">{{list.msg}}</text>
+			</view>
+			<view class="swiper-selbar">
+				<view class="selvideo" @click.stop="sellxj()">
+					<text class="swipers-items-info-num">{{list.namets}}</text>
+					<image src="@/static/img/index/up.png" class="selicon"></image>
+				</view>
+				<view class="swipers-items-qpimg" @click.stop="qingping()">
+					<uni-icons v-if="isqp" type="checkbox" size="24" color="#666"></uni-icons>
+					<uni-icons v-else type="close" size="24" color="#666"></uni-icons>
+				</view>
+			</view>
+		</swiper-item>
+    </swiper>
+	<uni-popup type="bottom" ref="select">
+		<view class="list">
+			<view class="list-top">
+				<image :src="vodinfo.img" class="list-top-img"></image>
+				<view class="list-top-text">
+					<view>
+						<text class="list-top-title">{{vodinfo.title}}</text>
+					</view>
+					<view>
+						<text class="list-top-info">{{vodinfo.story}}</text>
+					</view>
+				</view>
+				
+			</view>
+			<uni-icons class="downicon" type="down" color="#ff007f" @click="down()"></uni-icons>
+			<scroll-view :scroll-y="true" :scroll-top="scrollTop" style="max-height: 700rpx;padding-bottom: 30rpx;">
+				<view class="list-box">
+					<view v-for="(list,index) in originList" :key="index" @click="selectThisVideo(index,list.pays)" class="list-box-item">
+						<view class="list-box-item-info" :style="index == originIndex?'background-color:#fee9f8':''">
+							<view class="item_suo_box" v-if="list.pays==1">
+								<uni-icons class="item_suo" type="locked" color="#ff007f"></uni-icons>
+							</view>
+							<text class="item_name" :style="index == originIndex?'color:#ff007f':''">{{index+1}}</text>
+						</view>
+					</view>
+				</view>
+			</scroll-view>
+		</view>
+	</uni-popup>
+	<!--弹窗广告-->
+	<uni-popup ref="popupad" type="bottom">
+		<view class="custom_ad" :style="'height:'+(windowHeight-statusBarHeight)+'px;'">
+			<text class="adtip">AD | {{second}} {{second_tip}}</text>
+			<text @click="closeAd()" class="adclose">{{$t('Close')}}</text>
+			<image v-if="adinfo.type =='image'" class="adimg" mode="aspectFit" :src="adinfo.src"></image>
+			<video class="adimg" v-else :src="adinfo.src" autoplay="true" controls="false"></video>
+			<view class="adlink">
+				<text class="linkbtn" @tap="clickAd()">{{$t('View more')}}</text>
+			</view>
+			
+		</view>
+	</uni-popup>
+	<uni-popup ref="popupbuy" type="bottom">
+		<charge-dialog :vid="vid" :serialNo="serialno" :mid="mid" :adunlock="adunlock"
+		 @Adunlock="freebyad"
+		 @watchClose="chargeClose">
+		</charge-dialog>
+	</uni-popup>
+  </view>
+</template>
+
+<script>
+import request from "@/common/request.js"
+var adtmjs,rewardedVideoAd
+import { mapActions } from 'vuex'
+export default {
+	data() {
+		return {
+			vodinfo:[],
+			total:0,
+			vodfit:'fill',
+			controls:true,
+			fullscreen:false,
+			playbtn:false,
+			originList: [], // 源数据
+			displaySwiperList: [], // swiper需要的数据
+			displayIndex: 0, // 用于显示swiper的真正的下标数值只有：0，1，2。
+			originIndex: 0, // 记录源数据的下标
+			windowWidth:0,
+			windowHeight:0,
+			videoHeight:0,
+			statusBarHeight:0,
+			current:0,
+			circular:false,
+			oid:0,
+			isplay:true,//是否自动播放下一个视频
+			playCount:2,//剩余多少视频加载视频列表
+			duration: 500,
+			issp:'',
+			isqp:false,//清屏
+			ispause:true,
+			buyindex:0,//解锁集索引
+			scrollTop:0,
+			vid: 0,
+			serialno:0,//第几集
+			mid: 0,//单集ID
+			uscore:0,
+			priced:0,//单集价格
+			priceq:0,//全集价格
+			muted:true,//是否静音
+			sharelink:'',
+			infostyle:'height:68rpx;',
+			showinfo:false,
+			ad_isLoaded:false,
+			adpid:'',
+			mpadid:'',
+			adunlock:0,//广告解锁开关
+			ad_unlock_vids:[],//广告解锁剧集
+			unlocknum:1,//解锁集数
+			second:60,//广告时间
+			second_tip:'',
+			adinfo:[],//平台广告
+		}
+	},
+	onLoad(e) {
+		this.lang = uni.getStorageSync('locale');
+		this.$t=getApp().globalData.$t;
+		this.second_tip = this.$t('unlockadtip')
+		
+		if(e.invitecode){
+			uni.setStorageSync('invitecode',e.invitecode)
+		}
+		if(e.vid>0){
+			this.vid = parseInt(e.vid)
+		}
+		if(e.mid>0){
+			this.mid = parseInt(e.mid)
+		}
+		if(e.serialno>0){
+			this.serialno = parseInt(e.serialno)
+		}
+		
+		
+
+		//缓存的解锁剧集
+		if(uni.getStorageSync("ad_unlock_vids")){
+			this.ad_unlock_vids = uni.getStorageSync("ad_unlock_vids")
+		}
+		this.config();
+		this.videoinfo();
+	},
+	onReady() {
+		// 使用同步方法获取系统信息
+		const systemInfo = uni.getSystemInfoSync();
+		this.statusBarHeight = systemInfo.statusBarHeight;
+		// 获取安全区域信息
+		const safeArea = systemInfo.safeArea;
+		// 底部安全高度（注意：这里假设safeArea.bottom是相对于屏幕底部的安全距离）
+		const safeHeight = safeArea.bottom ? safeArea.bottom : 0;
+		this.windowWidth = systemInfo.windowWidth>750?750:systemInfo.windowWidth
+		this.windowHeight = systemInfo.windowHeight
+		this.videoHeight = safeHeight-65
+	},
+	methods: {
+		...mapActions(['getConfig']),
+		async config(){
+			let sitecfg = await this.getConfig()
+			if(sitecfg && sitecfg.site.adunlock==1){
+				this.adunlock = parseInt(sitecfg.site.adunlock)
+				this.unlocknum = sitecfg.site.adunlock_num
+				this.adpid = sitecfg.site.appad.adpid;//app奖励广告adpid
+				this.createAd();
+			}
+		},
+		//加载剧集
+		async videoinfo(){
+			let that=this
+			let data = {};
+			data.vid= parseInt(this.vid)			
+			let [err,res] =await request.get('/api/video/videoinfo',data,{token:true});
+			
+			if(res.data.total){
+				uni.setNavigationBarTitle({
+				    title: res.data.title
+				});
+				this.vodinfo = res.data.info
+				
+				this.total = res.data.total//总集数
+				var msg = res.data.data
+				var midlog = res.data.midlog //观看历史记录视频id
+				//2.这里把视频添加到视频列表
+				for (let i = 0; i < msg.length; i++) {
+					if(that.serialno>0){
+						if(i == that.serialno-1){
+							that.originIndex=i
+						}
+					}else if(msg[i].mid==that.mid){
+						that.originIndex=i
+					}else{
+						if(msg[i].mid == midlog){
+							that.originIndex=i
+						}
+					}
+					//判断是否广告解锁
+					if(msg[i].pays==1 && that.ad_unlock_vids.indexOf(msg[i].pid+'_'+msg[i].mid) !=-1){
+						msg[i].pays = 2
+					}
+				}
+				that.originList = msg
+				that.initSwiperData(that.originIndex);
+			}else{
+				uni.showToast({ title: this.$t('An unexpected error occurred'),icon:"none" });
+				setTimeout(function(){
+					uni.navigateTo({
+						url:'/pages/index/index'
+					})
+				},1000)
+			}
+		},
+	createAd(){
+		// #ifndef H5
+		let userId = this.memberInfo?this.memberInfo.id:0;
+		
+		if (this.adpid || this.mpadid){
+			rewardedVideoAd = uni.createRewardedVideoAd({
+				adpid: this.adpid,
+				urlCallback: { // 服务器回调透传参数
+				  userId: userId,
+				  extra: 'testdata'
+				}
+			})
+			rewardedVideoAd.onLoad(() => {
+				this.ad_isLoaded = true
+				console.log('onLoad event')
+				// 当激励视频被关闭时，默认预载下一条数据，加载完成时仍然触发 `onLoad` 事件
+			})
+			rewardedVideoAd.onError((err) => {
+				console.log('onError event', err)
+			})
+			rewardedVideoAd.onClose(res => {
+			  if (res && res.isEnded) {
+				// 正常播放结束
+				this.adEnded()
+			  } else {
+				// 播放中途退出
+			  }
+			})
+		}
+		// #endif
+	},
+	clickLeft(){
+		let curpages=getCurrentPages()
+		if(curpages.length>1){
+			uni.navigateBack()
+		}else{
+			uni.navigateTo({
+				url:'/pages/index/index'
+			})
+		}
+	},
+	onVideoLoaded(event){
+		//自适应横竖屏
+		if(event.detail.height < event.detail.width){
+			this.vodfit='contain';
+		}
+	},
+	share(){
+		// #ifdef MP-WEIXIN
+		   return
+		// #endif
+		this.$refs.popupbuy.close();
+
+		var href=request.config.baseUrl+'/pages/video/detail?vid='+this.vid+'&invitecode='+this.inviteCode
+		let that=this
+		uni.setClipboardData({
+			data: href,
+			complete() {
+				uni.showToast({
+					title: that.$t('Sharing link copied'),icon:"none" 
+				})
+			}
+		})
+	},
+	//广告解锁
+	async freebyad(){
+		let that=this
+		this.chargeClose();
+		if (this.ad_isLoaded) {
+			rewardedVideoAd.show()
+		}else{
+			
+			//随机取一个广告
+			let data={}
+			let [err,res] =await request.get('/api/index/rewardad',data);
+			if(res.data.code==1){
+				this.adinfo=res.data.data
+			}
+			this.$refs.popupad.open('bottom');
+			
+			clearInterval(adtmjs)
+			this.second=30
+			//广告时间
+			adtmjs = setInterval(() => {
+				this.second--
+				if (this.second == 0) {
+					clearInterval(adtmjs)
+					adtmjs = null
+					this.second=''
+					this.second_tip= that.$t('unlockok')
+				}
+			}, 1000);
+		}
+	},
+	closeAd(){
+		this.$refs.popupad.close();
+		if(this.second==''){
+			this.adEnded()
+		}
+	},
+	clickAd(){
+		if(!this.adinfo.link){
+			return
+		}
+		if(this.adinfo.linktype==1){
+			uni.navigateTo({
+				url:'/pages/index/webva?url='+encodeURIComponent(this.adinfo.link)
+			})
+		}else{
+			uni.navigateTo({
+				url:this.adinfo.link
+			})
+		}
+	},
+	//激励广告执行解锁
+	adEnded(){
+		var curindex = this.buyindex
+		for (let i=0;i<this.unlocknum;i++) {
+			if(!this.originList[curindex]){
+				break
+			}
+			let info=this.originList[curindex]
+			let ad_vid=info.pid+'_'+info.id;
+			
+			if(this.ad_unlock_vids.indexOf(ad_vid)==-1){
+				this.ad_unlock_vids.push(ad_vid)
+			}
+			curindex++
+		}
+		uni.setStorageSync("ad_unlock_vids",this.ad_unlock_vids)
+		
+		//刷新数据,判断是否广告解锁
+		for (let i=0;i<this.originList.length;i++) {
+			let pid=this.originList[i].pid
+			let mid=this.originList[i].mid
+			if(this.originList[i].pays==1 && this.ad_unlock_vids.indexOf(pid+'_'+mid) !=-1){
+				this.originList[i].pays = 2
+			}
+		}
+		
+		uni.showToast({
+		  title: this.$t('video.unlockok'),
+		  icon:'none'
+		})
+		this.selectThisVideo(this.buyindex,2)
+	},
+	timeupdate(event){
+	  	if(event.detail.currentTime>0 && this.originList[this.originIndex].pays==1){
+	  		uni.createVideoContext(this.originList[this.originIndex]._id,this).seek(0);
+	  		uni.createVideoContext(this.originList[this.originIndex]._id,this).pause();
+			this.buyindex = this.originIndex
+	  	}
+	},
+	//选集播放
+	selectThisVideo(index,pays){
+		this.down();
+		this.duration = 20;
+		this.originIndex=index
+		this.initSwiperData(index);
+		setTimeout(()=>{
+			this.duration = 500;
+		},500)
+	},
+	down(){
+		this.$refs.select.close();
+	},
+	chargeClose(){
+	  	this.$refs.popupbuy.close();
+	},
+	sellxj() {
+	  	this.$refs.select.open('bottom');
+	  	this.$nextTick(()=>{
+	  		let num1 = (this.windowHeight/1.6)*0.85;
+	  		let num2 = num1/4.78;
+	  		this.scrollTop = num2 * Number(this.k);
+	  	})
+	},
+	tapVides(){
+		if(this.originList[this.originIndex].pays==1){
+			this.isqp=true
+			this.buyindex=this.originIndex
+			this.$refs.popupbuy.open('bottom');
+			return
+		}
+		if(this.ispause){
+			uni.createVideoContext(this.originList[this.originIndex]._id,this).play();
+			this.ispause=false
+		}else{
+			uni.createVideoContext(this.originList[this.originIndex]._id,this).pause();
+			this.ispause=true
+		}
+	},
+	qingping(){
+		  this.isqp=!this.isqp	
+	},
+	play(){
+	  	this.ispause=false
+	},
+	pause(){
+	  	this.ispause=true
+	},
+	// 播放结束
+	ended(e) {
+		if(!this.isplay){
+			return
+		}
+		if(this.displayIndex<2){
+			this.current=this.displayIndex+1
+		}else{
+			this.current=0	
+		}
+	},
+    /**
+     * 初始一个显示的swiper数据
+     * originIndex  从源数据的哪个开始显示默认0，如从其他页面跳转进来，要显示第n个，这个参数就是他的下标
+     */
+    async initSwiperData(originIndex = this.originIndex) {
+		this.isqp=false
+		this.ispause=true
+		this.muted=true
+		
+		const originListLength = this.originList.length; // 源数据长度
+		const displayList = [];
+		displayList[this.displayIndex] = this.originList[originIndex];
+		displayList[this.displayIndex - 1 == -1 ? 2 : this.displayIndex - 1] = this.originList[originIndex - 1 == -1 ? originListLength - 1 : originIndex - 1];
+		displayList[this.displayIndex + 1 == 3 ? 0 : this.displayIndex + 1] = this.originList[originIndex + 1 == originListLength ? 0 : originIndex + 1];
+      
+		this.displaySwiperList = displayList;
+	  
+		if(this.oid>=this.originList.length){
+			this.oid=0
+		}
+		if(this.oid<0){
+			this.oid=this.originList.length-1
+		}
+		if(this.oid){
+			uni.createVideoContext(this.originList[this.oid]._id,this).stop();
+		}
+	  
+	  //正在播放集数
+	  this.mid = this.originList[originIndex].mid
+	  this.serialno = parseInt(originIndex+1)//集数
+	  	  
+	  if(this.originList[originIndex].pays==1){
+			this.buyindex=this.originIndex
+			this.$refs.popupbuy.open('bottom');
+	  }else{
+		this.muted=false
+		setTimeout(()=>{
+		 	uni.createVideoContext(this.originList[originIndex]._id).play();
+			this.bfjl(this.originList[originIndex].mid)
+		},500)
+	  }
+    },
+	
+	//滑动兼容APP android
+	touchStart(res) {
+		// #ifdef APP-PLUS
+		this.pageStartY = res.changedTouches[0].pageY;
+		//console.log("touchStart：" + this.pageStartY);
+		// #endif
+	},
+	touchEnd(res) {
+		// #ifdef APP-PLUS
+		this.pageEndY = res.changedTouches[0].pageY;
+		var diff=this.pageStartY - this.pageEndY
+		//console.log("touchEnd：" + this.pageEndY,diff,this.current);
+		let platform = uni.getSystemInfoSync().osName;
+		if (platform == 'android') {
+			if (diff > 100) {
+				if(this.displayIndex<2){
+					this.current=this.displayIndex+1
+				}else{
+					this.current=0	
+				}
+			} else if (diff < -100) {
+				if (this.current >= 1) {
+					this.current = this.current - 1
+				}else{
+					this.current=2	
+				}
+			}
+		}
+		// #endif
+	},
+	
+    /**
+     * swiper滑动时候
+     */
+    swiperChange(event) {
+		this.circular=true
+		const { current } = event.detail;
+		const originListLength = this.originList.length; // 源数据长度
+      // =============向后==========
+      if (this.displayIndex - current == 2 || this.displayIndex - current == -1) {
+        this.originIndex =
+          this.originIndex + 1 == originListLength ? 0 : this.originIndex + 1;
+        this.displayIndex = this.displayIndex + 1 == 3 ? 0 : this.displayIndex + 1;
+        this.initSwiperData(this.originIndex);
+      }
+      // ======如果两者的差为-2或者1则是向前滑动============
+      else if (this.displayIndex - current == -2 || this.displayIndex - current == 1) {
+        this.originIndex = this.originIndex - 1 == -1 ? originListLength - 1 : this.originIndex - 1;
+        this.displayIndex = this.displayIndex - 1 == -1 ? 2 : this.displayIndex - 1;
+        this.initSwiperData(this.originIndex);
+      }
+    },
+	
+	async toComment(sss,vid,mid){//追剧
+		if(!this.memberToken){
+			this.denglu()
+			return false
+		}
+		const video = this.displaySwiperList[this.displayIndex];
+		//console.log(sss)
+		if(sss==1){
+			this.displaySwiperList[this.displayIndex].iszj=2
+		}else{
+			this.displaySwiperList[this.displayIndex].iszj=1
+		}
+		
+		let this_=this
+		let data = {'vid':vid,'mid':mid};
+		let [err,res] =await request.get('/api/user/videorecord',data,{token:true});
+	},
+	//更新播放记录
+	async bfjl(mid){
+		if(this.memberToken){
+			let data = {'vid':this.vid,'mid':mid};
+			let [err,res] =await request.get('/api/video/bfjl',data,{token:true});
+		}
+	},
+	controlstoggle(e){
+		this.issp=e.detail.show
+	},
+	async cLike(sss,vid,mid){
+		if(!this.memberToken){
+			this.denglu()
+			return false
+		}
+		const video = this.displaySwiperList[this.displayIndex];
+		if(sss==1){
+			this.displaySwiperList[this.displayIndex].like=2
+			video.like_n += 1;
+		}else{
+			this.displaySwiperList[this.displayIndex].like=1
+			video.like_n -= 1
+		}
+		
+		let data = {'vid':vid,'mid':mid};
+		let [err,res] =await request.get('/api/user/tapLove',data,{token:true});
+	},
+	denglu(){
+		uni.navigateTo({
+			url:"/pages/login/login"
+		})
+	},
+	infodetail(){
+		if(this.showinfo==false){
+			this.infostyle='min-height:68rpx;';
+			this.showinfo =true
+		}else{
+			this.infostyle='height:68rpx;';
+			this.showinfo =false
+		}
+	},
+	onHide() {
+		if(this.originList[this.originIndex]){
+			uni.createVideoContext(this.originList[this.originIndex]._id,this).stop();
+		}
+	}
+  }
+}
+</script>
+
+<style>
+.detail {
+	width: 750rpx;
+	background-color: #000;
+	position: relative;
+}
+.topbar{
+	width: 750rpx;
+	position: absolute;
+	top:0;
+	z-index:100;
+}
+.swipers {
+	width: 750rpx;
+}
+.swipers-items{
+	position: relative;
+}
+.swipers-items-video {
+	width:750upx;
+}
+.swipers-items-imgsbg {
+	width: 100%;
+	height: 100%;
+	border-radius: 0 0 25rpx 25rpx;
+}
+.playbtnbox{
+	width:750upx;
+	position: absolute;
+	top:0;
+	z-index:1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: rgba(0, 0, 0,0.6);
+}
+.playState{
+	width:  160rpx;
+	height: 160rpx;
+	opacity: 0.8;
+}
+.unlockbtn{
+	padding:20upx;
+	border-radius:50rpx;
+	background-color: #ff007f;
+}
+.unlockbtn-txt{
+	color:white;
+	font-size:12px;
+}
+
+.swipers-items-info {
+	width: 600rpx;
+	position: absolute;
+	bottom: 200rpx;
+	left: 20rpx;
+	color: #ffffff;
+	z-index: 1;	
+}
+.swipers-items-info-title{
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+.swipers-items-info-img{
+	width:60rpx;
+	height:80rpx;
+	border-radius: 10rpx;
+}
+.swipers-items-info-name{
+	color: #ffffff;
+	font-size: 28rpx;
+	margin-left: 20rpx;
+}
+.swipers-items-info-content {
+	font-size: 26rpx;
+	color: #ffffff;
+	overflow: hidden;
+	margin-top: 10rpx;
+	border-radius: 10rpx;
+}
+.swiper-selbar{
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+.selvideo{
+	width:650rpx;
+}
+.selicon{
+	z-index: 1;
+	width:60rpx;
+	height:60rpx; 
+	position: absolute;
+	top:35rpx;
+	right: 50rpx;
+}
+.swipers-items-info-num {
+	margin: 30rpx;
+	color: #ffffff;
+	font-size: 28rpx;
+	background-color: #1a1a1a;
+	border-radius: 10rpx;
+	padding: 20rpx;
+	opacity: 1;
+}
+.swipers-items-qpimg{
+	margin-left:15rpx;
+}
+.swipers-items-right {
+	z-index: 1;
+	width: 70rpx;
+	position: absolute;
+	right: 20rpx;
+	bottom: 300rpx;
+	z-index: 999;	
+}
+.swipers-items-right-item {
+	margin-bottom: 40rpx;
+}
+.swipers-items-right-item-img {
+	width: 60rpx;
+	height: 60rpx;
+	margin-left:5rpx
+}
+.swipers-items-right-item-txt {
+	text-align: center;
+	font-size: 24rpx;
+	color: #ffffff;
+	font-weight: bold;
+	margin-top: 10rpx;
+}
+.share-btn{
+	z-index: 1;
+	position: absolute; 
+	width: 60rpx; 
+	height: 60rpx;
+	border: 0;
+	background-color: transparent;
+}
+
+.list {
+	background:#ffffff;
+	padding:20upx;
+	border-radius: 20upx 20upx 0 0;
+}
+.list-top {
+	display: flex;
+	flex-direction: row;
+}
+.list-top-img {
+	width: 130upx;
+	height: 160upx;
+	border-radius: 10rpx;
+}
+.list-top-text {
+	padding-left: 30rpx;
+	padding-right: 30rpx;
+}
+.list-top-title {
+	font-size:28upx;
+}
+.list-top-info {
+	font-size:20upx;
+	color:#999;
+}
+
+.list-item {
+	padding: 0 30rpx;
+}
+.list-item-box {
+	line-height: 90rpx;
+	background-color: #fff;
+	color: #000;
+	font-weight: bold;
+	text-align: center;
+	margin-bottom: 40rpx;
+	border-radius: 20rpx;
+}
+.list-box {
+	width:710rpx;
+	display:flex;
+	flex-wrap: wrap; /* 允许换行 */
+	flex-direction: row;
+	padding-top: 20upx;
+	align-items: center; /* 子元素在交叉轴上的对齐方式 */
+}
+.list-box-item {
+	position: relative;
+	text-align: center;
+	margin: 9upx;
+	height: 100upx;
+	width: 100upx;
+	border-radius: 10rpx;
+	overflow: hidden;
+	background-color: #F2F5F7;
+}
+.item_name{
+	line-height: 100upx;
+	font-size: 36rpx;
+	text-align: center;
+}
+.item_suo_box{
+	position: absolute;
+	z-index: 1;
+	top:0;
+	right:0;
+	width: 36upx; 
+	height: 36upx;
+	background-color: #e7e7e7;
+	border-radius: 0 10rpx;
+}
+.flex_row{
+	display: flex;
+	align-items: center;
+}
+
+.downicon {
+	width: 30px; 
+	height: 30px; 
+	margin-top: 5px; 
+	position: absolute;
+	z-index: 1;
+	right: 10px;
+}
+
+.custom_ad{
+	background-color: #000;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.adtip{
+	position: absolute;
+	left:10px;
+	top:10px;
+	color:#ccc;
+	font-size: 12px;
+	z-index: 100;
+	border: solid 1px #eee;
+	border-radius: 10px;
+	padding: 2px 5px;
+	background-color: #333;
+}
+.adclose{
+	position: absolute;
+	right:10px;
+	top:10px;
+	color:white;
+	font-size: 12px;
+	z-index: 100;
+	border: solid 1px #eee;
+	border-radius: 10px;
+	padding: 2px 5px;
+	background-color: #333;
+}
+.adimg{
+	/* #ifndef APP-NVUE */
+	width: 100%;
+	height: 100%;
+	/* #endif */
+	/* #ifdef APP-NVUE */
+	flex: 1;
+	/* #endif */
+}
+.adlink{
+	position: absolute;
+	bottom:15px;
+	justify-content: center;
+}
+.linkbtn{
+	color:white;
+	background-color: #2aae67;
+	width: 200px;
+	padding: 10px;
+	text-align: center;
+	border-radius: 5px;
+}
+</style>

@@ -1,0 +1,239 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",//默认首页
+			"style": {
+				"navigationBarTitleText": "",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/history/history",
+			"style": {
+				"navigationBarTitleText": "",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/video/video",
+			"style": {
+				 "navigationBarTitleText": "",
+				 "navigationBarTextStyle": "white",
+				 "navigationStyle": "custom",
+				 "app-plus": {
+				 	"titleNView": {
+				 		"type": "transparent"
+				 	}
+				 }
+			}
+		},
+		{
+			"path": "pages/member/index",
+			"style": {
+				"navigationBarTitleText": "",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/video/list"
+		},
+		{
+			"path": "pages/video/rank"
+		},
+		{
+			"path": "pages/video/detail",
+			"style": {
+				"navigationBarTitleText": "",
+				"navigationBarTextStyle": "white",
+				"navigationStyle": "custom"
+			}
+		},
+		
+		{
+			"path": "pages/history/zjgk",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/history/wdxh",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/history/zjjl",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/login/login",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/login/reg",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/login/forget",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/login/agreement",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/member/feedback",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/member/vip",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/member/recharge",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/member/integrallog",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/member/getscore",
+			"style": {
+				"navigationBarTitleText": "",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/member/orders",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/member/paylog",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/set/set",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+		    "path" : "pages/set/grzl/grzl",
+		    "style" : {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+		    "path" : "pages/set/grzl/modphone",
+		    "style" : {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+		    "path" : "pages/set/grzl/modemail",
+		    "style" : {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+		    "path" : "pages/set/about",
+			"style" : {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/open",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/index",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/team",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/order",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/moneylog",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/sonagent",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+		    "path" : "pages/agent/tixian",
+			"style" : {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+		    "path" : "pages/agent/txlog",
+		     "style" : {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/agent/qrshare",
+			"style": {
+				 "navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/index/webva"
+		}
+    ],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "",
+		"navigationBarBackgroundColor": "#F5F6FA",
+		"backgroundColor": "#F5F6FA"
+	},
+	"easycom": {
+	  "autoscan": true,
+	  "custom": {
+			"com-(.*)":"@/components/common/$1.vue",
+			"sub-(.*)":"@/components/sub/$1.vue",
+			"dialog-(.*)":"@/components/dialog/$1.vue"
+	  }
+	}
+}
